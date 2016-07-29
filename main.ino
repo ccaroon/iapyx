@@ -2,18 +2,22 @@
 #include "HttpClient.h"
 #include "SparkJson.h"
 
+#define HOST_NAME "10.15.0.29"
+#define PORT 8080
+#define START_BUILD_URL "/job/Release/buildWithParameters?TriggerAction=Production-Deployment&Project=WASP";
+#define LAST_BUILD_URL "/job/Release/lastBuild/api/json"
+
 #define DIRECTION_CLOCKWISE 0
 #define DIRECTION_COUNTER_CLOCKWISE 1
-// #define SPARK_CORE (1)
 
 HttpClient http;
 InternetButton button = InternetButton();
 
+http_request_t request;
+http_response_t response;
 http_header_t headers[] = {
-    //  { "Content-Type", "application/json" },
-    // { "Accept" , "application/json" },
     { "Accept" , "*/*"},
-    { NULL, NULL } // NOTE: Always terminate headers will NULL
+    { NULL, NULL }
 };
 
 void setup () {
@@ -72,14 +76,98 @@ void progress(uint8_t direction, long wait) {
 }
 
 void release() {
-  // button.rainbow(25);
-  // startRelease();
-  parseSomeJSON();
+  //----------------------------------------------------------------------------
+  // 0. Get current timestamp and convert to milliseconds
+  unsigned long current_time = Time.now();
+  Serial.print("Curr TS: ");
+  Serial.println(current_time);
+  // Serial.println(current_time * 1000);
 
-  progress(DIRECTION_CLOCKWISE, 25);
-  progress(DIRECTION_CLOCKWISE, 25);
+  // 1. POST to build url
+  request.hostname = HOST_NAME;
+  request.port = PORT;
+  request.path = START_BUILD_URL;
+  http.get(request, response, headers);
+  if (response.status == 201) {
+    // 2. GET last build url
+    //     - if `timestamp` is after `curr_timestamp`
+    //         - build_url = `url` + "api/json"
+    //         - goto #3
+    //     - else
+    //         - sleep 1
+    //         - goto #2
+    bool gotStatusUrl = false;
+    String statusUrl;
 
-  button.allLedsOn(0,255,0);
+    request.hostname = HOST_NAME;
+    request.port = PORT;
+    request.path = LAST_BUILD_URL;
+    int numRetries = 0;
+    while (gotStatusUrl == false) {
+      http.get(request, response, headers);
+      if (response.status < 300) {
+        // StaticJsonBuffer<200> jsonBuffer;
+        DynamicJsonBuffer jsonBuffer;
+        char body[response.body.length()];
+        response.body.toCharArray(body, response.body.length()+1);
+        Serial.println(body);
+        JsonObject& root = jsonBuffer.parseObject(body);
+
+        unsigned long timestamp = (unsigned long long)(root["timestamp"]) / 1000);
+        Serial.print("Jenkins TS: ");
+        Serial.println(timestamp);
+
+        const char* url     = root["url"];
+
+        if (timestamp > current_time) {
+          Serial.print("timestamp is good: ");
+          Serial.println(timestamp);
+
+          statusUrl = String(url) + "api/json";
+          Serial.print("statusUrl: ");
+          Serial.println(statusUrl);
+
+          gotStatusUrl = true;
+        } else {
+          numRetries++;
+          if (numRetries > 3) {
+            Serial.println("Expended all Retries. Stopping.");
+            gotStatusUrl = true;
+          } else {
+            delay(1000);
+          }
+        }
+      } else {
+        Serial.print("Request error getting LAST_BUILD_URL: ");
+        Serial.println(response.status);
+        gotStatusUrl = true;
+      }
+    }
+  } else {
+    Serial.println("Could not start build");
+    button.allLedsOn(255,0,0);
+    delay(1000);
+  }
+
+
+  // 3. GET job specific url
+  // 4. Check `building`
+  //     - if `building` is true
+  //         - sleep 1
+  //         - goto #3
+  //     else
+  //         - goto #5
+  // 5. Check `result`
+  //     - if "SUCCESS"
+  //         - light-up green
+  //     - else
+  //         - light-up red
+  //----------------------------------------------------------------------------
+
+  // progress(DIRECTION_CLOCKWISE, 25);
+  // progress(DIRECTION_CLOCKWISE, 25);
+  //
+  // button.allLedsOn(0,255,0);
 
   delay(2000);
 }
@@ -102,54 +190,6 @@ void cancel() {
   button.allLedsOn(255,0,0);
 
   delay(1000);
-}
-
-void startRelease() {
-  http_request_t request;
-  http_response_t response;
-
-  request.hostname = "192.168.1.84";
-  request.port = 8080;
-  request.path = "/job/Release/buildWithParameters?Project=WASP&TriggerAction=Production-Deployment";
-
-  http.get(request, response);
-
-  Serial.print("Status: ");
-  Serial.println(response.status);
-  Serial.print("Body: ");
-  Serial.println(response.body);
-  // response.status
-  // response.body
-}
-
-void parseSomeJSON() {
-  Serial.println("--- parseSomeJSON start ---");
-  StaticJsonBuffer<200> jsonBuffer;
-
-  Serial.println("set json string");
-  char json[] =
-      "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";
-
-  Serial.println("create JsonObject");
-  JsonObject& root = jsonBuffer.parseObject(json);
-
-  if (!root.success()) {
-    Serial.println("parseObject() failed");
-    return;
-  }
-
-  Serial.println("access data");
-  const char* sensor = root["sensor"];
-  long time = root["time"];
-  double latitude = root["data"][0];
-  double longitude = root["data"][1];
-
-  Serial.println(sensor);
-  Serial.println(time);
-  Serial.println(latitude, 6);
-  Serial.println(longitude, 6);
-
-  Serial.println("--- parseSomeJSON end ---");
 }
 
 void loop() {
