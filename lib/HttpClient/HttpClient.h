@@ -61,7 +61,7 @@ public:
     * Public references to variables.
     */
     TCPClient client;
-    char buffer[1024];
+    char buffer[1536];
 
     /**
     * Constructor.
@@ -111,7 +111,7 @@ public:
     {
         request(aRequest, aResponse, headers, HTTP_METHOD_DELETE);
     }
-	
+
     void patch(http_request_t &aRequest, http_response_t &aResponse, http_header_t headers[])
     {
         request(aRequest, aResponse, headers, HTTP_METHOD_PATCH);

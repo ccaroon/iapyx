@@ -2,12 +2,15 @@
 #include "HttpClient.h"
 #include "SparkJson.h"
 
-const char* HOST_NAME = "192.168.1.84";
-const int PORT        = 8080;
+const char* HOST_NAME = "jenkins.webassign.net";
+const int PORT        = 80;
 
-const char* JOB_NAME       = "Release";
+const char* JOB_NAME       = "ReleaseTest";
 const char* TRIGGER_ACTION = "Production-Deployment";
 const char* PROJECT        = "WASP";
+const char* VERSION        = "1.0.0";
+const char* TOKEN          = "START";
+const char* CAUSE          = "Internet+Button";
 
 #define DIRECTION_CLOCKWISE 0
 #define DIRECTION_COUNTER_CLOCKWISE 1
@@ -32,6 +35,15 @@ void setup () {
 
 void smile() {
   button.allLedsOff();
+
+  for (int i = 0; i < 11; i+=2) {
+    button.ledOn(i, 64, 64, 0);
+  }
+
+  for (int i = 1; i <= 11; i+=2) {
+    button.ledOn(i, 64, 64, 64);
+  }
+
   // button.ledOn(1,  128, 128, 0);
   // button.ledOn(11, 128, 128, 0);
   //
@@ -40,7 +52,7 @@ void smile() {
   // button.ledOn(6,  128, 128, 0);
   // button.ledOn(7,  128, 128, 0);
   // button.ledOn(8,  128, 128, 0);
-  button.allLedsOn(random(256), random(256), random(256));
+  /*button.allLedsOn(random(256), random(256), random(256));*/
 }
 
 bool confirm() {
@@ -86,7 +98,12 @@ bool startBuild() {
   request.hostname = HOST_NAME;
   request.port = PORT;
   // "/job/Release/buildWithParameters?TriggerAction=Production-Deployment&Project=WASP";
-  request.path = String("/job/") + JOB_NAME + String("/buildWithParameters?TriggerAction=") + TRIGGER_ACTION + String("&Project=") + PROJECT;
+  request.path = String("/job/") + JOB_NAME
+    + String("/buildWithParameters?TriggerAction=") + TRIGGER_ACTION
+    + String("&Project=") + PROJECT
+    + String("&Version=") + VERSION
+    + String("&token=")   + TOKEN
+    + String("&cause=")   + CAUSE;
 
   bool keepTrying = true;
   while (keepTrying) {
@@ -120,6 +137,25 @@ bool startBuild() {
   return(buildStarted);
 }
 
+bool isLatestBuildInfo(ArduinoJson::JsonObject& root) {
+  bool isLatest = false;
+  // const char* result = root["result"];
+  //
+  // Serial.print("isLatestBuildInfo Result: ");
+  // Serial.println(result);
+  //
+  // if (result == NULL || strcmp(result, "") == 0) {
+  //   isLatest = true;
+  // }
+
+  bool building = root["building"];
+  if (building) {
+    isLatest = true;
+  }
+
+  return (isLatest);
+}
+
 // if (true) {
 // 2. GET last build url
 //     - if `timestamp` is after `curr_timestamp`
@@ -136,46 +172,50 @@ String getStatusUrl() {
 
   bool keepTrying = true;
   while (keepTrying) {
+    Serial.print("Last Build: ");
+    Serial.print(request.hostname);
+    Serial.print(":");
+    Serial.print(request.port);
+    Serial.println(request.path);
     http.get(request, response, headers);
 
     if (response.status == 200) {
       // StaticJsonBuffer<200> jsonBuffer;
       DynamicJsonBuffer jsonBuffer;
+
+      Serial.println(response.body);
+
       char body[response.body.length()];
-      response.body.toCharArray(body, response.body.length()+1);
-      // Serial.println(body);
+      response.body.toCharArray(body, response.body.length() + 1);
+      Serial.println(body);
       JsonObject& root = jsonBuffer.parseObject(body);
 
-      // const char* tsStr = root["timestamp"];
-      bool building = root["building"];
-      // long long timestamp = atoi(tsStr);
-      // unsigned long timestamp = 0;
-      // Serial.print("Jenkins TS (String): ");
+      if (!root.success()) {
+        Serial.println("--------- JSON Parsing Failed ----------");
+        Serial.println(body);
+        Serial.println("----------------------------------------");
+      }
+      // Serial.println("---------------------------------------");
+      // bool building = root["building"];
+      // const char* result = root["result"];
+      //
       // Serial.println(building);
+      // Serial.println(result);
+      // Serial.println("---------------------------------------");
 
-      // Serial.print("Jenkins TS (long long): ");
-      // Serial.println(timestamp);
-
-      // if (timestamp > current_time) {
-      if (building == true) {
-        // Serial.print("timestamp is good: ");
-        // Serial.println(timestamp);
-
+      if (isLatestBuildInfo(root)) {
         // const char* url = root["url"];
         // statusUrl = String(url) + "api/json";
         // "/job/Release/lastBuild/api/json"
         const char* id = root["id"];
         statusUrl = String("/job/") + JOB_NAME + String("/") + String(id) + String("/api/json");
-        // Serial.print("statusUrl: ");
-        // Serial.println(statusUrl);
 
         keepTrying = false;
       } else {
-        if (retryNum >= 10) {
+        if (retryNum >= 5) {
           Serial.println("---> Retries Maxed Out. <---");
           keepTrying = false;
         } else {
-          Serial.print("building: "); Serial.println(building);
           Serial.println("Not current build status. Sleeping. Will Retry.");
           // delay(1000);
           progress(DIRECTION_CLOCKWISE, 20);
@@ -317,16 +357,34 @@ void cancel() {
   delay(1000);
 }
 
+void debugIt() {
+  DynamicJsonBuffer jsonBuffer;
+  char body[] = "{ \"buidling\": false, \"success\": true, \"craig\": 12345678 }";
+  Serial.println(body);
+  JsonObject& root = jsonBuffer.parseObject(body);
+
+  int craig = root["craig"];
+  bool building = root["building"];
+  bool success  = root["success"];
+
+  Serial.print("Building(bool): "); Serial.println(building);
+  Serial.print("Success(bool): "); Serial.println(success);
+  Serial.print("Craig: "); Serial.println(craig);
+}
+
 void loop() {
 
   if (button.buttonOn(3)) {
-    button.playNote("Bb5",16);
+    // button.playNote("Bb5",16);
     // button.playSong("C5,16,C#5,16,D5,16,D#5,16,E5,16,F5,16,F#5,16,G5,16,G#5,16,A5,16,A#5,16,B5,16\n");
     if (confirm()) {
       release();
     } else {
       cancel();
     }
+    smile();
+  } else if (button.buttonOn(1)) {
+    debugIt();
     smile();
   }
 
