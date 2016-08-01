@@ -2,16 +2,18 @@
 #include "HttpClient.h"
 #include "SparkJson.h"
 
-#define HOST_NAME "10.15.0.29"
-#define PORT 8080
-#define START_BUILD_URL "/job/Release/buildWithParameters?TriggerAction=Production-Deployment&Project=WASP";
-#define LAST_BUILD_URL "/job/Release/lastBuild/api/json"
+const char* HOST_NAME = "192.168.1.84";
+const int PORT        = 8080;
+
+const char* JOB_NAME       = "Release";
+const char* TRIGGER_ACTION = "Production-Deployment";
+const char* PROJECT        = "WASP";
 
 #define DIRECTION_CLOCKWISE 0
 #define DIRECTION_COUNTER_CLOCKWISE 1
 
-HttpClient http;
 InternetButton button = InternetButton();
+HttpClient http;
 
 http_request_t request;
 http_response_t response;
@@ -23,6 +25,8 @@ http_header_t headers[] = {
 void setup () {
   Serial.begin(9600);
   button.begin();
+
+  randomSeed(Time.now());
   smile();
 }
 
@@ -36,7 +40,7 @@ void smile() {
   // button.ledOn(6,  128, 128, 0);
   // button.ledOn(7,  128, 128, 0);
   // button.ledOn(8,  128, 128, 0);
-  button.allLedsOn(64,64,64);
+  button.allLedsOn(random(256), random(256), random(256));
 }
 
 bool confirm() {
@@ -78,17 +82,25 @@ void progress(uint8_t direction, long wait) {
 void release() {
   //----------------------------------------------------------------------------
   // 0. Get current timestamp and convert to milliseconds
-  unsigned long current_time = Time.now();
-  Serial.print("Curr TS: ");
-  Serial.println(current_time);
+  // unsigned long current_time = Time.now();
+  // Serial.print("Curr TS: ");
+  // Serial.println(current_time);
   // Serial.println(current_time * 1000);
 
   // 1. POST to build url
   request.hostname = HOST_NAME;
   request.port = PORT;
-  request.path = START_BUILD_URL;
+  // "/job/Release/buildWithParameters?TriggerAction=Production-Deployment&Project=WASP";
+  request.path = String("/job/") + JOB_NAME + String("/buildWithParameters?TriggerAction=") + TRIGGER_ACTION + String("&Project=") + PROJECT;
+
+  Serial.print(request.hostname);
+  Serial.print(":");
+  Serial.print(request.port);
+  Serial.println(request.path);
+
   http.get(request, response, headers);
   if (response.status == 201) {
+  // if (true) {
     // 2. GET last build url
     //     - if `timestamp` is after `curr_timestamp`
     //         - build_url = `url` + "api/json"
@@ -99,13 +111,18 @@ void release() {
     bool gotStatusUrl = false;
     String statusUrl;
 
-    request.hostname = HOST_NAME;
-    request.port = PORT;
-    request.path = LAST_BUILD_URL;
+    // request.hostname = HOST_NAME;
+    // request.port = PORT;
+    // "/job/Release/lastBuild/api/json"
+    request.path = String("/job/") + JOB_NAME + String("/lastBuild/api/json");
+
     int numRetries = 0;
     while (gotStatusUrl == false) {
       http.get(request, response, headers);
       if (response.status < 300) {
+      // if (true) {
+        // response.body = "{\"building\": true,\"id\": \"22\",\"keepLog\": false,\"result\": \"SUCCESS\",\"timestamp\": 1469818058442,\"url\": \"http://localhost:8080/job/Release/22/\"}"
+;
         // StaticJsonBuffer<200> jsonBuffer;
         DynamicJsonBuffer jsonBuffer;
         char body[response.body.length()];
@@ -113,38 +130,67 @@ void release() {
         Serial.println(body);
         JsonObject& root = jsonBuffer.parseObject(body);
 
-        unsigned long timestamp = (unsigned long long)(root["timestamp"]) / 1000);
-        Serial.print("Jenkins TS: ");
-        Serial.println(timestamp);
+        // const char* tsStr = root["timestamp"];
+        bool building = root["building"];
+        // long long timestamp = atoi(tsStr);
+        // unsigned long timestamp = 0;
+        // Serial.print("Jenkins TS (String): ");
+        // Serial.println(building);
 
-        const char* url     = root["url"];
+        // Serial.print("Jenkins TS (long long): ");
+        // Serial.println(timestamp);
 
-        if (timestamp > current_time) {
-          Serial.print("timestamp is good: ");
-          Serial.println(timestamp);
+        // if (timestamp > current_time) {
+        if (building == true) {
+          // Serial.print("timestamp is good: ");
+          // Serial.println(timestamp);
 
-          statusUrl = String(url) + "api/json";
+          // const char* url = root["url"];
+          // statusUrl = String(url) + "api/json";
+          // "/job/Release/lastBuild/api/json"
+          const char* id = root["id"];
+          statusUrl = String("/job/") + JOB_NAME + String("/") + String(id) + String("/api/json");
           Serial.print("statusUrl: ");
           Serial.println(statusUrl);
 
           gotStatusUrl = true;
         } else {
-          numRetries++;
-          if (numRetries > 3) {
+          if (numRetries >= 10) {
             Serial.println("Expended all Retries. Stopping.");
             gotStatusUrl = true;
           } else {
+            Serial.print("buidling: "); Serial.println(building);
+            Serial.println("Not current build status. Sleeping. Will Retry.");
             delay(1000);
           }
+          numRetries++;
         }
       } else {
-        Serial.print("Request error getting LAST_BUILD_URL: ");
+        Serial.print("Error Requesting Last Build Information: ");
+        Serial.print(request.hostname);
+        Serial.print(":");
+        Serial.print(request.port);
+        Serial.println(request.path);
+
+        Serial.print("Status: ");
         Serial.println(response.status);
+
         gotStatusUrl = true;
       }
+
+      // Serial.print("Great! Continuing... ");
+      // Serial.println(statusUrl);
     }
   } else {
-    Serial.println("Could not start build");
+    Serial.print("Error Starting Build: ");
+    Serial.print(request.hostname);
+    Serial.print(":");
+    Serial.print(request.port);
+    Serial.println(request.path);
+
+    Serial.print("Status: ");
+    Serial.println(response.status);
+
     button.allLedsOn(255,0,0);
     delay(1000);
   }
@@ -189,13 +235,25 @@ void cancel() {
   delay(500);
   button.allLedsOn(255,0,0);
 
+  // Serial.print("char: ");
+  // Serial.println(sizeof(unsigned char));
+  //
+  // Serial.print("int: ");
+  // Serial.println(sizeof(unsigned int));
+  //
+  // Serial.print("long: ");
+  // Serial.println(sizeof(unsigned long));
+  //
+  // Serial.print("long long: ");
+  // Serial.println(sizeof(unsigned long long));
+
   delay(1000);
 }
 
 void loop() {
 
   if (button.buttonOn(3)) {
-    // button.playNote("Bb5",16);
+    button.playNote("Bb5",16);
     // button.playSong("C5,16,C#5,16,D5,16,D#5,16,E5,16,F5,16,F#5,16,G5,16,G#5,16,A5,16,A#5,16,B5,16\n");
     if (confirm()) {
       release();
@@ -206,4 +264,13 @@ void loop() {
   }
 
   delay(100);
+}
+
+long long char2LL(char *str)
+{
+  long long result = 0; // Initialize result
+  // Iterate through all characters of input string and update result
+  for (int i = 0; str[i] != '\0'; ++i)
+    result = result*10 + str[i] - '0';
+  return result;
 }
