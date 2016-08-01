@@ -79,122 +79,189 @@ void progress(uint8_t direction, long wait) {
   }
 }
 
-void release() {
-  //----------------------------------------------------------------------------
-  // 0. Get current timestamp and convert to milliseconds
-  // unsigned long current_time = Time.now();
-  // Serial.print("Curr TS: ");
-  // Serial.println(current_time);
-  // Serial.println(current_time * 1000);
+bool startBuild() {
+  bool buildStarted = false;
+  uint8_t retryNum = 0;
 
-  // 1. POST to build url
   request.hostname = HOST_NAME;
   request.port = PORT;
   // "/job/Release/buildWithParameters?TriggerAction=Production-Deployment&Project=WASP";
   request.path = String("/job/") + JOB_NAME + String("/buildWithParameters?TriggerAction=") + TRIGGER_ACTION + String("&Project=") + PROJECT;
 
-  Serial.print(request.hostname);
-  Serial.print(":");
-  Serial.print(request.port);
-  Serial.println(request.path);
-
-  http.get(request, response, headers);
-  if (response.status == 201) {
-  // if (true) {
-    // 2. GET last build url
-    //     - if `timestamp` is after `curr_timestamp`
-    //         - build_url = `url` + "api/json"
-    //         - goto #3
-    //     - else
-    //         - sleep 1
-    //         - goto #2
-    bool gotStatusUrl = false;
-    String statusUrl;
-
-    // request.hostname = HOST_NAME;
-    // request.port = PORT;
-    // "/job/Release/lastBuild/api/json"
-    request.path = String("/job/") + JOB_NAME + String("/lastBuild/api/json");
-
-    int numRetries = 0;
-    while (gotStatusUrl == false) {
-      http.get(request, response, headers);
-      if (response.status < 300) {
-      // if (true) {
-        // response.body = "{\"building\": true,\"id\": \"22\",\"keepLog\": false,\"result\": \"SUCCESS\",\"timestamp\": 1469818058442,\"url\": \"http://localhost:8080/job/Release/22/\"}"
-;
-        // StaticJsonBuffer<200> jsonBuffer;
-        DynamicJsonBuffer jsonBuffer;
-        char body[response.body.length()];
-        response.body.toCharArray(body, response.body.length()+1);
-        Serial.println(body);
-        JsonObject& root = jsonBuffer.parseObject(body);
-
-        // const char* tsStr = root["timestamp"];
-        bool building = root["building"];
-        // long long timestamp = atoi(tsStr);
-        // unsigned long timestamp = 0;
-        // Serial.print("Jenkins TS (String): ");
-        // Serial.println(building);
-
-        // Serial.print("Jenkins TS (long long): ");
-        // Serial.println(timestamp);
-
-        // if (timestamp > current_time) {
-        if (building == true) {
-          // Serial.print("timestamp is good: ");
-          // Serial.println(timestamp);
-
-          // const char* url = root["url"];
-          // statusUrl = String(url) + "api/json";
-          // "/job/Release/lastBuild/api/json"
-          const char* id = root["id"];
-          statusUrl = String("/job/") + JOB_NAME + String("/") + String(id) + String("/api/json");
-          Serial.print("statusUrl: ");
-          Serial.println(statusUrl);
-
-          gotStatusUrl = true;
-        } else {
-          if (numRetries >= 10) {
-            Serial.println("Expended all Retries. Stopping.");
-            gotStatusUrl = true;
-          } else {
-            Serial.print("buidling: "); Serial.println(building);
-            Serial.println("Not current build status. Sleeping. Will Retry.");
-            delay(1000);
-          }
-          numRetries++;
-        }
-      } else {
-        Serial.print("Error Requesting Last Build Information: ");
-        Serial.print(request.hostname);
-        Serial.print(":");
-        Serial.print(request.port);
-        Serial.println(request.path);
-
-        Serial.print("Status: ");
-        Serial.println(response.status);
-
-        gotStatusUrl = true;
-      }
-
-      // Serial.print("Great! Continuing... ");
-      // Serial.println(statusUrl);
-    }
-  } else {
-    Serial.print("Error Starting Build: ");
+  bool keepTrying = true;
+  while (keepTrying) {
+    Serial.print("Start Build: ");
     Serial.print(request.hostname);
     Serial.print(":");
     Serial.print(request.port);
     Serial.println(request.path);
 
-    Serial.print("Status: ");
-    Serial.println(response.status);
+    http.get(request, response, headers);
 
-    button.allLedsOn(255,0,0);
-    delay(1000);
+    if (response.status == 201) {
+      keepTrying   = false;
+      buildStarted = true;
+      Serial.println("*** Build Started ***");
+    } else {
+      Serial.print("Status: ");
+      Serial.println(response.status);
+
+      if (retryNum > 5) {
+        keepTrying = false;
+        Serial.println("Retries Maxed Out.");
+      } else {
+        Serial.println("Retrying...");
+        retryNum++;
+        progress(DIRECTION_CLOCKWISE, 20);
+      }
+    }
   }
 
+  return(buildStarted);
+}
+
+// if (true) {
+// 2. GET last build url
+//     - if `timestamp` is after `curr_timestamp`
+//         - build_url = `url` + "api/json"
+//         - goto #3
+//     - else
+//         - sleep 1
+//         - goto #2
+String getStatusUrl() {
+  uint8_t retryNum = 0;
+  String statusUrl = "";
+
+  request.path = String("/job/") + JOB_NAME + String("/lastBuild/api/json");
+
+  bool keepTrying = true;
+  while (keepTrying) {
+    http.get(request, response, headers);
+
+    if (response.status == 200) {
+      // StaticJsonBuffer<200> jsonBuffer;
+      DynamicJsonBuffer jsonBuffer;
+      char body[response.body.length()];
+      response.body.toCharArray(body, response.body.length()+1);
+      // Serial.println(body);
+      JsonObject& root = jsonBuffer.parseObject(body);
+
+      // const char* tsStr = root["timestamp"];
+      bool building = root["building"];
+      // long long timestamp = atoi(tsStr);
+      // unsigned long timestamp = 0;
+      // Serial.print("Jenkins TS (String): ");
+      // Serial.println(building);
+
+      // Serial.print("Jenkins TS (long long): ");
+      // Serial.println(timestamp);
+
+      // if (timestamp > current_time) {
+      if (building == true) {
+        // Serial.print("timestamp is good: ");
+        // Serial.println(timestamp);
+
+        // const char* url = root["url"];
+        // statusUrl = String(url) + "api/json";
+        // "/job/Release/lastBuild/api/json"
+        const char* id = root["id"];
+        statusUrl = String("/job/") + JOB_NAME + String("/") + String(id) + String("/api/json");
+        // Serial.print("statusUrl: ");
+        // Serial.println(statusUrl);
+
+        keepTrying = false;
+      } else {
+        if (retryNum >= 10) {
+          Serial.println("---> Retries Maxed Out. <---");
+          keepTrying = false;
+        } else {
+          Serial.print("building: "); Serial.println(building);
+          Serial.println("Not current build status. Sleeping. Will Retry.");
+          // delay(1000);
+          progress(DIRECTION_CLOCKWISE, 20);
+        }
+        retryNum++;
+      }
+    } else {
+      Serial.println("---> Error Requesting Last Build Information <---");
+
+      Serial.print("Status: ");
+      Serial.println(response.status);
+
+      keepTrying = false;
+    }
+  }
+
+    return (statusUrl);
+}
+
+bool getBuildStatus(String url) {
+  bool buildOK = false;
+  uint8_t retryNum = 0;
+
+  request.hostname = HOST_NAME;
+  request.port = PORT;
+  request.path = url;
+
+  bool keepTrying = true;
+  while (keepTrying) {
+    Serial.print("Checking Status: ");
+    Serial.print(request.hostname);
+    Serial.print(":");
+    Serial.print(request.port);
+    Serial.println(request.path);
+
+    http.get(request, response, headers);
+
+    if (response.status == 200) {
+      DynamicJsonBuffer jsonBuffer;
+      char body[response.body.length()];
+      response.body.toCharArray(body, response.body.length()+1);
+      JsonObject& root = jsonBuffer.parseObject(body);
+
+      bool building = root["building"];
+      if (building == false) {
+        keepTrying = false;
+        const char* result = root["result"];
+        if (String(result) == "SUCCESS") {
+          buildOK = true;
+        }
+      } else {
+        // still building
+        progress(DIRECTION_CLOCKWISE, 20);
+      }
+    } else {
+      // bad response code
+    }
+  }
+
+  return(buildOK);
+}
+
+void release() {
+  // unsigned long current_time = Time.now();
+  bool OK = false;
+
+  if (startBuild()) {
+    String statusUrl = getStatusUrl();
+    if (statusUrl != "") {
+      Serial.print("Status URL: ");
+      Serial.println(statusUrl);
+
+      OK = getBuildStatus(statusUrl);
+    }
+  } else {
+    Serial.println("---> Error Starting Build <---");
+    OK = false;
+  }
+
+  if (OK == true) {
+    button.allLedsOn(0,255,0);
+  } else {
+    button.allLedsOn(255,0,0);
+  }
+
+  delay(5000);
 
   // 3. GET job specific url
   // 4. Check `building`
