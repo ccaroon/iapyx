@@ -2,16 +2,10 @@
 #include "Iapyx.h"
 #include "InternetButton.h"
 #include "SparkJson.h"
+#include "Iapyx.h"
 
-const char *HOST_NAME = "jenkins.webassign.net";
-const int PORT = 80;
+#include "JenkinsInfo.h"
 
-const char *JOB_NAME = "ReleaseTest";
-const char *TRIGGER_ACTION = "Production-Deployment";
-const char *PROJECT = "WASP";
-const char *VERSION = "1.0.0";
-const char *TOKEN = "START";
-const char *CAUSE = "Internet+Button";
 const Color PROGRESS_COLOR = {0, 128, 255};
 
 #define DIRECTION_CLOCKWISE 0
@@ -107,11 +101,14 @@ bool startBuild() {
 
   request.hostname = HOST_NAME;
   request.port = PORT;
-  request.path = String("/job/") + JOB_NAME +
-                 String("/buildWithParameters?TriggerAction=") +
-                 TRIGGER_ACTION + String("&Project=") + PROJECT +
-                 String("&Version=") + VERSION + String("&token=") + TOKEN +
-                 String("&cause=") + CAUSE;
+
+  request.path = String("/job/") + JOB_NAME
+    + String("/buildWithParameters?TriggerAction=") + TRIGGER_ACTION
+    + String("&ProjectName=") + PROJECT
+    + String("&Repository=") + REPOSITORY
+    + String("&Branch=")     + BRANCH
+    + String("&token=")      + TOKEN
+    + String("&cause=")      + CAUSE;
 
   bool keepTrying = true;
   while (keepTrying) {
@@ -121,7 +118,7 @@ bool startBuild() {
     Serial.print(request.port);
     Serial.println(request.path);
 
-    http.get(request, response, headers);
+    http.post(request, response, headers);
 
     if (response.status == 201) {
       keepTrying = false;
@@ -176,7 +173,7 @@ String getStatusUrl() {
   uint8_t retryNum = 0;
   String statusUrl = "";
 
-  request.path = String("/job/") + JOB_NAME + String("/lastBuild/api/json");
+  request.path = String("/job/") + JOB_NAME + String("/lastBuild/api/json?tree=id,building,result");
 
   bool keepTrying = true;
   while (keepTrying) {
@@ -191,7 +188,7 @@ String getStatusUrl() {
       // StaticJsonBuffer<200> jsonBuffer;
       DynamicJsonBuffer jsonBuffer;
 
-      Serial.println(response.body);
+      // Serial.println(response.body);
 
       char body[response.body.length()];
       response.body.toCharArray(body, response.body.length() + 1);
@@ -216,12 +213,22 @@ String getStatusUrl() {
         // statusUrl = String(url) + "api/json";
         // "/job/Release/lastBuild/api/json"
         const char *id = root["id"];
-        statusUrl = String("/job/") + JOB_NAME + String("/") + String(id) +
-                    String("/api/json");
+        // statusUrl = String("/job/") + JOB_NAME + String("/") + String(id) +
+        //             String("/api/json?tree=building,result");
+        statusUrl = "/job/";
+        statusUrl += String(JOB_NAME);
+        statusUrl += "/";
+        statusUrl += String(id);
+        statusUrl += "/api/json?tree=building,result";
+        // statusUrl = String("/job/") + String(JOB_NAME) + String("/") + String(id) +
+        //             String("/api/json?tree=building,result");
+
+        Serial.print("getStatusUrl: ");
+        Serial.println(statusUrl);
 
         keepTrying = false;
       } else {
-        if (retryNum >= 5) {
+        if (retryNum >= 10) {
           Serial.println("---> Retries Maxed Out. <---");
           keepTrying = false;
         } else {
@@ -259,15 +266,26 @@ bool getBuildStatus(String url) {
     Serial.print(request.port);
     Serial.println(request.path);
 
+    Serial.println("Before GET");
     http.get(request, response, headers);
+    Serial.print("After GET: ");
+    Serial.println(response.status);
 
     if (response.status == 200) {
+      Serial.println("Before JSON parse");
       DynamicJsonBuffer jsonBuffer;
       char body[response.body.length()];
       response.body.toCharArray(body, response.body.length() + 1);
+
+      Serial.println(body);
+
       JsonObject &root = jsonBuffer.parseObject(body);
+      Serial.println("After JSON parse");
 
       bool building = root["building"];
+      Serial.print("building: ");
+      Serial.println(building);
+
       if (building == false) {
         keepTrying = false;
         const char *result = root["result"];
@@ -279,7 +297,8 @@ bool getBuildStatus(String url) {
         progress(DIRECTION_CLOCKWISE, 1000, PROGRESS_COLOR);
       }
     } else {
-      // bad response code
+      Serial.print("-- Error Checking build status: ");
+      Serial.println(response.status);
     }
   }
 
