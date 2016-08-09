@@ -2,7 +2,6 @@
 #include "Iapyx.h"
 #include "InternetButton.h"
 #include "SparkJson.h"
-#include "Iapyx.h"
 
 #include "JenkinsInfo.h"
 
@@ -22,8 +21,9 @@ void setup() {
   Serial.begin(9600);
   button.begin();
 
+  Time.zone(-4);
   randomSeed(Time.now());
-  smile();
+  updateClock();
 }
 
 void smile() {
@@ -35,6 +35,32 @@ void smile() {
   }
 
   // button.allLedsOn(random(256), random(256), random(256));
+}
+
+void updateClock() {
+  uint8_t hour = Time.hour();
+  if (hour > 12) {
+    hour -= 12;
+  }
+
+  uint8_t min = Time.minute();
+  min /= 5;
+
+  Serial.print("Hour: "); Serial.println(hour);
+  Serial.print("Min: "); Serial.println(min);
+
+  button.allLedsOff();
+
+  if (hour == min && hour > 0 && hour < 12) {
+    button.ledOn(hour, 0,64,64);
+  } else {
+    if (hour > 0 && hour < 12) {
+      button.ledOn(hour, 0,0,64);
+    }
+    if (min > 0 && min < 12) {
+      button.ledOn(min, 0,64,0);
+    }
+  }
 }
 
 bool confirm() {
@@ -74,12 +100,14 @@ void progress(uint8_t direction, long duration, const Color &c,
       button.ledOn(i, c.red, c.green, c.blue);
       delay(wait);
     }
+    button.ledOff(11);
   } else {
     for (int i = 11; i >= 0; i--) {
       button.ledOff(i + 1);
       button.ledOn(i, c.red, c.green, c.blue);
       delay(wait);
     }
+    button.ledOff(0);
   }
 
   // if (direction == DIRECTION_CLOCKWISE) {
@@ -398,12 +426,24 @@ void debugIt() {
   // Serial.println(craig);
 
   // Color c = {random(255), random(255), random(255)};
-  progress(DIRECTION_CLOCKWISE, 500, PROGRESS_COLOR, true);
-  progress(DIRECTION_CLOCKWISE, 500, PROGRESS_COLOR, true);
+  progress(DIRECTION_CLOCKWISE, 1000, PROGRESS_COLOR, true);
+  delay(750);
+  progress(DIRECTION_CLOCKWISE, 1000, PROGRESS_COLOR, true);
+  delay(750);
+  progress(DIRECTION_CLOCKWISE, 1000, PROGRESS_COLOR, true);
+  delay(750);
+  progress(DIRECTION_CLOCKWISE, 1000, PROGRESS_COLOR, true);
+  delay(750);
+
+  // progress(DIRECTION_CLOCKWISE, 500, PROGRESS_COLOR, true);
   // delay(5000);
-  // progress(DIRECTION_COUNTER_CLOCKWISE, 500, PROGRESS_COLOR, false);
+  // progress(DIRECTION_COUNTER_CLOCKWISE, 5000, PROGRESS_COLOR, true);
+  // Serial.println(Time.now());
+  // Serial.println(Time.hour());
+  // Serial.println(Time.minute());
 }
 
+long lastTimeCheck = Time.now();
 void loop() {
 
   if (button.buttonOn(3)) {
@@ -412,10 +452,17 @@ void loop() {
     } else {
       cancel();
     }
-    smile();
+    // smile();
+    updateClock();
   } else if (button.buttonOn(1)) {
     debugIt();
-    smile();
+    // smile();
+    updateClock();
+  }
+
+  if (Time.now() - 60 > lastTimeCheck) {
+    lastTimeCheck = Time.now();
+    updateClock();
   }
 
   delay(100);
