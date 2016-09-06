@@ -7,11 +7,15 @@
 // const char *TOKEN = "START";
 // const char *CAUSE = "Internet+Button";
 
+// Jenkins Host, Port
+// Jenkins Job Name
+// Job Query String Params
+// Debug?
 Iapyx iapyx(
   "jenkins.webassign.net", 80,
-  "Icarus/job/the_button",
-  // "Daedalus",
-  "TriggerAction=Production-Deployment&ProjectName=Prod&Repository=armory,portal,sentinel&Branch=production&token=START&cause=Internet+Button",
+  // "Icarus/job/the_button",
+  "Daedalus",
+  "TriggerAction=Production-Deployment&ProjectName=Prod&Repository=pandora&Branch=production&token=START&cause=Internet+Button",
    true
 );
 
