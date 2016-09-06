@@ -9,50 +9,53 @@
 #define DIRECTION_COUNTER_CLOCKWISE 1
 
 typedef struct {
-  int red;
-  int green;
-  int blue;
+    int red;
+    int green;
+    int blue;
 } Color;
 
 const Color PROGRESS_COLOR = {0, 128, 255};
+const Color SPINNER_COLOR1 = {128, 128, 0};
+const Color SPINNER_COLOR2 = {0, 128, 128};
 
 class Iapyx {
-public:
-  Iapyx(String host, int port, String jobName, String params, bool debug);
+  public:
+    Iapyx(String host, int port, String jobName, String params, bool debug);
 
-  // Main "Screens"
-  void smile();
-  void clock();
-  // TODO: LED color change based on time?
+    // Main "Screens"
+    void smile();
+    void clock();
+    // TODO: LED color change based on time?
 
-  void loop();
+    void loop();
 
-private:
-  bool debugMode;
+  private:
+    bool debugMode;
 
-  String host;
-  int port;
-  String jobName;
-  String params;
+    String host;
+    int port;
+    String jobName;
+    String params;
 
-  InternetButton button;
+    InternetButton button;
 
-  HttpClient http;
-  http_request_t request;
-  http_response_t response;
-  http_header_t headers[2] = {{"Accept", "*/*"}, {NULL, NULL}};
+    HttpClient http;
+    http_request_t request;
+    http_response_t response;
+    http_header_t headers[2] = {{"Accept", "*/*"}, {NULL, NULL}};
 
-  bool confirm();
-  void cancel();
-  void startJobAndMonitor();
+    bool confirm();
+    void cancel();
+    void startJobAndMonitor();
 
-  bool startBuild();
-  String getStatusUrl();
-  bool getBuildStatus(String url);
-  bool isLatestBuildInfo(ArduinoJson::JsonObject &root);
+    bool startBuild();
+    String getStatusUrl();
+    bool getBuildStatus(String url);
+    bool isLatestBuildInfo(ArduinoJson::JsonObject &root);
 
-  void progress(uint8_t, long, const Color &, bool);
-  void playground();
+    void progress(uint8_t, long, const Color &, bool);
+    void spinner(long, const Color &, bool);
+    void playground();
 };
 
 #endif

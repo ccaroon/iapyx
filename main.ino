@@ -11,27 +11,24 @@
 // Jenkins Job Name
 // Job Query String Params
 // Debug?
-Iapyx iapyx(
-  "jenkins.webassign.net", 80,
-  // "Icarus/job/the_button",
-  "Daedalus",
-  "TriggerAction=Production-Deployment&ProjectName=Prod&Repository=pandora&Branch=production&token=START&cause=Internet+Button",
-   true
-);
+Iapyx iapyx("jenkins.webassign.net", 80,
+            // "Icarus/job/the_button",
+            "Daedalus", "TriggerAction=Production-Deployment&ProjectName=Prod&"
+                        "Repository=pandora&Branch=production&token=START&"
+                        "cause=Internet+Button",
+            true);
 
-void setup() {
-  Serial.begin(9600);
-}
+void setup() { Serial.begin(9600); }
 
 long lastTimeCheck = 0;
 void loop() {
 
-  iapyx.loop();
+    iapyx.loop();
 
-  if (Time.now() - 60 > lastTimeCheck) {
-    lastTimeCheck = Time.now();
-    iapyx.clock();
-  }
+    if (Time.now() - 60 > lastTimeCheck) {
+        lastTimeCheck = Time.now();
+        iapyx.clock();
+    }
 
-  delay(100);
+    delay(100);
 }
