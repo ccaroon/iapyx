@@ -18,17 +18,24 @@ Iapyx iapyx("jenkins.webassign.net", 80,
                         "cause=Internet+Button",
             true);
 
-void setup() { Serial.begin(9600); }
+void home() {
+    iapyx.solidColor(255, 0, 0);
+}
 
 long lastTimeCheck = 0;
-void loop() {
-
-    iapyx.loop();
-
+void showClock() {
     if (Time.now() - 60 > lastTimeCheck) {
         lastTimeCheck = Time.now();
         iapyx.clock();
     }
+}
 
+void setup() {
+    Serial.begin(9600);
+    iapyx.setHomeScreen(home);
+}
+
+void loop() {
+    iapyx.loop();
     delay(100);
 }

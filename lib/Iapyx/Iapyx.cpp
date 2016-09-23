@@ -17,17 +17,74 @@ Iapyx::Iapyx(String host, int port, String jobName, String params,
 }
 
 void Iapyx::loop() {
-    if (button.buttonOn(3)) {
-        if (confirm()) {
-            startJobAndMonitor();
-            clock();
-        } else {
-            cancel();
-            clock();
-        }
-    } else if (button.buttonOn(1)) {
-        playground();
-        clock();
+
+    if (button.buttonOn(1)) {
+        button1Handler();
+    } else if (button.buttonOn(2)) {
+        button2Handler();
+    } else if (button.buttonOn(3)) {
+        button3Handler();
+    } else if (button.buttonOn(4)) {
+        button4Handler();
+    }
+
+    homeScreen();
+}
+
+void Iapyx::button1Handler() {
+    // playground();
+    clock();
+    delay(5000);
+};
+
+void Iapyx::button2Handler() {
+    for (uint8_t i = 0; i < 25; i++) {
+        rainbow();
+        delay(150);
+    }
+};
+
+void Iapyx::button3Handler() {
+    if (confirm()) {
+        startJobAndMonitor();
+    } else {
+        cancel();
+    }
+};
+
+void Iapyx::button4Handler() {
+
+    button.playSong("C5,16,C#5,16,D5,16,D#5,16,E5,16,F5,16,F#5,16,G5,16,G#5,16,"
+                    "A5,16,A#5,16,B5,16,\n");
+
+    button.playSong("C5,16,C#5,16,D5,16,D#5,16,E5,16,F5,16,F#5,16,G5,16,G#5,16,"
+                    "A5,16,A#5,16,B5,16,\n");
+
+    // button.playSong(
+    //     "DS5,16,E5,16,FS5,8,B5,8,DS5,16,E5,16,FS5,16,B5,16,CS6,16,"
+    //     "DS6,16,CS6,16,AS5,16,B5,8,FS5,8,DS5,16,E5,16,FS5,8,B5,8,"
+    //     "CS6,16,AS5,16,B5,16,CS6,16,E6,16,DS6,16,E6,16,B5,16\n");
+};
+
+void Iapyx::setHomeScreen(void (*f)()) {
+    this->homeScreenFunc = f;
+}
+
+void Iapyx::homeScreen() {
+    homeScreenFunc();
+}
+
+void Iapyx::solidColor(uint8_t r, uint8_t g, uint8_t b) {
+    button.allLedsOn(r, g, b);
+}
+
+void Iapyx::rainbow() {
+    for (uint8_t i = 1; i <= 11; i++) {
+        uint8_t r = random(255);
+        uint8_t g = random(255);
+        uint8_t b = random(255);
+
+        button.ledOn(i, r, g, b);
     }
 }
 
@@ -367,15 +424,16 @@ void Iapyx::playground() {
     // Serial.println(Time.hour());
     // Serial.println(Time.minute());
 
-    // button.allLedsOff();
+    button.allLedsOff();
     // for (int i = 1; i <= 11; i++) {
     //     button.ledOn(i, 64, 0, 0);
     //     delay(1000);
     // }
 
-    spinner(2000, SPINNER_COLOR1, true);
-    delay(1000);
-    spinner(2000, SPINNER_COLOR2, true);
+    button.ledOn(1, 255, 255, 255);
+    // spinner(2000, SPINNER_COLOR1, true);
+    // delay(1000);
+    // spinner(2000, SPINNER_COLOR2, true);
 
     delay(5000);
 }
@@ -436,7 +494,8 @@ void Iapyx::cancel() {
     for (int i = 1; i <= 11; i += 2) {
         button.ledOn(i, 255, 0, 0);
     }
-    delay(500);
+    button.playNote("Gb1", 1);
+    delay(250);
 
     button.allLedsOff();
 
@@ -445,9 +504,16 @@ void Iapyx::cancel() {
     }
     delay(500);
 
-    button.allLedsOn(255, 0, 0);
+    button.allLedsOff();
 
-    delay(4000);
+    for (int i = 1; i <= 11; i += 2) {
+        button.ledOn(i, 255, 0, 0);
+    }
+    delay(500);
+
+    // button.allLedsOn(255, 0, 0);
+
+    delay(2000);
 }
 
 // ****************************************************************************

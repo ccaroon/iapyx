@@ -25,12 +25,18 @@ class Iapyx {
     // Main "Screens"
     void smile();
     void clock();
+    void rainbow();
+    void solidColor(uint8_t, uint8_t, uint8_t);
+    void homeScreen();
+    void setHomeScreen(void (*f)());
     // TODO: LED color change based on time?
 
     void loop();
 
   private:
     bool debugMode;
+
+    void (*homeScreenFunc)();
 
     String host;
     int port;
@@ -56,6 +62,12 @@ class Iapyx {
     void progress(uint8_t, long, const Color &, bool);
     void spinner(long, const Color &, bool);
     void playground();
+
+    // TODO: Make these user settable
+    void button1Handler();
+    void button2Handler();
+    void button3Handler();
+    void button4Handler();
 };
 
 #endif
