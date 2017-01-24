@@ -1,4 +1,4 @@
-iapyx.bin: main.ino lib/*/*.h lib/*/*.cpp
+iapyx.bin: project.properties main.ino lib/*/*.h lib/*/*.cpp
 	particle compile photon . --saveTo iapyx.bin
 
 flash: iapyx.bin
