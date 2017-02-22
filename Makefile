@@ -1,11 +1,11 @@
-iapyx.bin: main.ino lib/*
-	mkdir dist
-	cp project.properties main.ino lib/* dist/
-	particle compile photon dist/ --saveTo iapyx.bin
-	rm -rf dist/
+iapyx.bin: src/* project.properties lib/*
+	mkdir build
+	cp project.properties src/* lib/* build/
+	particle compile photon build/ --saveTo iapyx.bin
+	rm -rf build/
 
 flash: iapyx.bin
 	particle flash Iapyx iapyx.bin
 
 clean:
-	rm -rf iapyx.bin dist/
+	rm -rf iapyx.bin build/

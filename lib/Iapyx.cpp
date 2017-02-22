@@ -12,7 +12,7 @@ Iapyx::Iapyx(String host, int port, String jobName, String params,
     button.begin();
 
     // Set Your Timezone offset here
-    Time.zone(-4);
+    Time.zone(-5);
     randomSeed(Time.now());
 }
 
