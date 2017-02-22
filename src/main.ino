@@ -19,7 +19,7 @@ Iapyx iapyx("jenkins.webassign.net", 80,
             true);
 
 void home() {
-    iapyx.solidColor(0, 128, 0);
+    iapyx.solidColor(128, 128, 128);
     // showClock();
 }
 
