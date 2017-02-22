@@ -1,4 +1,4 @@
-iapyx.bin: src/* project.properties lib/*
+iapyx.bin: project.properties src/* lib/*
 	mkdir build
 	cp project.properties src/* lib/* build/
 	particle compile photon build/ --saveTo iapyx.bin
