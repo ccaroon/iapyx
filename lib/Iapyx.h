@@ -50,6 +50,8 @@ class Iapyx {
     http_response_t response;
     http_header_t headers[2] = {{"Accept", "*/*"}, {NULL, NULL}};
 
+    int remoteControl(String cmd);
+
     bool confirm();
     void cancel();
     void startJobAndMonitor();

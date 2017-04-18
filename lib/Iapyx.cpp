@@ -8,6 +8,8 @@ Iapyx::Iapyx(String host, int port, String jobName, String params,
     this->params = params;
     this->debugMode = debug;
 
+    Particle.function("remoteCntl", &Iapyx::remoteControl, this);
+
     button = InternetButton();
     button.begin();
 
@@ -29,6 +31,21 @@ void Iapyx::loop() {
     }
 
     homeScreen();
+}
+
+int Iapyx::remoteControl(String cmd) {
+    if (cmd == "confirm") {
+        confirm();
+    } else if (cmd == "rainbow") {
+        rainbow();
+        delay(1000);
+    } else if (cmd == "deploy") {
+        startJobAndMonitor();
+    } else if (cmd == "spinner") {
+        spinner(3000, {0, 200, 0}, true);
+    }
+
+    return 0;
 }
 
 void Iapyx::button1Handler() {
