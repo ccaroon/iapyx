@@ -34,14 +34,14 @@ void Iapyx::loop() {
 }
 
 int Iapyx::remoteControl(String cmd) {
-    if (cmd == "confirm") {
-        confirm();
-    } else if (cmd == "rainbow") {
+    if (cmd == "test") {
+        button4Handler();
+    } else if (cmd == "deploy") {
         rainbow();
         delay(1000);
-    } else if (cmd == "deploy") {
-        startJobAndMonitor();
-    } else if (cmd == "spinner") {
+        // } else if (cmd == "deploy") {
+        //     startJobAndMonitor();
+    } else if (cmd == "spin") {
         spinner(3000, {0, 200, 0}, true);
     }
 
