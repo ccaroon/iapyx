@@ -54,7 +54,7 @@ class Iapyx {
 
     bool confirm();
     void cancel();
-    void startJobAndMonitor();
+    bool startJobAndMonitor();
 
     bool startBuild();
     String getStatusUrl();

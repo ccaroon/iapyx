@@ -34,18 +34,26 @@ void Iapyx::loop() {
 }
 
 int Iapyx::remoteControl(String cmd) {
-    if (cmd == "test") {
+    // Treating 'success' like a boolean, 1 == success, 0 == failure
+    int success = 1;
+
+    if (cmd == "demo") {
+        button2Handler();
+        spinner(2000, {0, 200, 65}, true);
         button4Handler();
     } else if (cmd == "deploy") {
-        rainbow();
-        delay(1000);
-        // } else if (cmd == "deploy") {
-        //     startJobAndMonitor();
-    } else if (cmd == "spin") {
-        spinner(3000, {0, 200, 0}, true);
+        bool OK = startJobAndMonitor();
+        if (OK == true) {
+            button.allLedsOn(0, 255, 0);
+        } else {
+            button.allLedsOn(255, 0, 0);
+            success = 0;
+        }
+
+        delay(5000);
     }
 
-    return 0;
+    return success;
 }
 
 void Iapyx::button1Handler() {
@@ -63,7 +71,15 @@ void Iapyx::button2Handler() {
 
 void Iapyx::button3Handler() {
     if (confirm()) {
-        startJobAndMonitor();
+        bool OK = startJobAndMonitor();
+
+        if (OK == true) {
+            button.allLedsOn(0, 255, 0);
+        } else {
+            button.allLedsOn(255, 0, 0);
+        }
+
+        delay(10000);
     } else {
         cancel();
     }
@@ -477,7 +493,7 @@ bool Iapyx::confirm() {
     return (OK);
 }
 
-void Iapyx::startJobAndMonitor() {
+bool Iapyx::startJobAndMonitor() {
     bool OK = false;
 
     if (startBuild()) {
@@ -496,13 +512,7 @@ void Iapyx::startJobAndMonitor() {
         OK = false;
     }
 
-    if (OK == true) {
-        button.allLedsOn(0, 255, 0);
-    } else {
-        button.allLedsOn(255, 0, 0);
-    }
-
-    delay(10000);
+    return (OK);
 }
 
 void Iapyx::cancel() {
