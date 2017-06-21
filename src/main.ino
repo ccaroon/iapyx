@@ -1,8 +1,6 @@
 #include "Iapyx.h"
 
 // const char *TRIGGER_ACTION = "Production-Deployment";
-// const char *PROJECT = "Prod";
-// const char *REPOSITORY = "armory,portal,sentinel";
 // const char *BRANCH = "production";
 // const char *TOKEN = "START";
 // const char *CAUSE = "Internet+Button";
@@ -13,14 +11,25 @@
 // Debug?
 Iapyx iapyx("jenkins.webassign.net", 80,
             // "Icarus/job/the_button",
-            "Daedalus", "TriggerAction=Production-Deployment&ProjectName=Prod&"
-                        "Repository=pandora&Branch=production&token=START&"
-                        "cause=Internet+Button",
+            "Pandora",
+            "ProductName=pandora&"
+            "Branch=production&"
+            "TriggerAction=Production-Deployment&"
+            "token=START&"
+            "cause=Internet+Button",
             true);
 
 void home() {
-    iapyx.solidColor(32, 32, 32);
+    // uint8_t r = random(255);
+    // uint8_t g = random(255);
+    // uint8_t b = random(255);
+    // iapyx.solidColor(r, g, b);
+
+    // iapyx.smile();
     // showClock();
+
+    iapyx.solidColor(0, 0, 0);
+    // iapyx.twinkle();
 }
 
 long lastTimeCheck = 0;

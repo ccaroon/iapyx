@@ -26,6 +26,7 @@ class Iapyx {
     void smile();
     void clock();
     void rainbow();
+    void twinkle();
     void solidColor(uint8_t, uint8_t, uint8_t);
     void homeScreen();
     void setHomeScreen(void (*f)());

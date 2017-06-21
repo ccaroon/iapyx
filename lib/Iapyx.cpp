@@ -134,6 +134,13 @@ void Iapyx::smile() {
     button.ledOn(8, 128, 128, 0);
 }
 
+void Iapyx::twinkle() {
+    uint8_t i = random(11);
+
+    button.allLedsOff();
+    button.ledOn(i, 255, 255, 255);
+}
+
 void Iapyx::clock() {
     uint8_t hour = Time.hour();
     if (hour > 12) {
